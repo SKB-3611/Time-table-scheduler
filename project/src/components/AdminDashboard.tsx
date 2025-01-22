@@ -94,7 +94,7 @@ export default function AdminDashboard() {
     }
     console.log(obj)
     try{
-      let res = await fetch(`${import.meta.env.HOST}/timetable/generate`,{
+      let res = await fetch(`${import.meta.env.VITE_HOST}/timetable/generate`,{
         method:'POST',
         body:JSON.stringify(obj),
         headers:{
