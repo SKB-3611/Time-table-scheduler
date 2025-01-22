@@ -4,7 +4,7 @@ import timetableRouter from './routes/timetable';  // Assuming your router file 
 import dotenv from 'dotenv';
 import cors from 'cors';
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 dotenv.config();
 // Middleware to parse JSON bodies
 
@@ -16,5 +16,5 @@ app.use('/auth', authRouter);
 app.use('/timetable', timetableRouter);
 
 app.listen(port, () => {
-  console.log(`Server is running at http://localhost:${port}`);
+  console.log(`Server is running at ${process.env.HOST}:${port}`);
 });
