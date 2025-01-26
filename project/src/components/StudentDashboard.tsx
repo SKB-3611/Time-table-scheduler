@@ -1,21 +1,44 @@
-import React, { useState } from 'react';
+import  { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import Timetable from './Timetable';
-import { timetableData } from '../data/mockData';
 import { Calendar, Clock } from 'lucide-react';
-import { getCurrentDay, isUpcoming, sortByTime } from '../utils/dateUtils';
+import { renderTimeSlot, parseTime, sortTimeRanges } from '../utils/utils';
+import { TimeSlot } from '../types';
+import Timetable from './Timetable';
+
 
 export default function StudentDashboard() {
+  const days= ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
+  const [isLoading, setIsLoading] = useState(true);  
   const { user, logout } = useAuth();
-  const [currentTimetable] = useState(timetableData);
-  
-  const today = getCurrentDay();
-  const todayClasses = currentTimetable
-    .filter(slot => slot.day === today)
-    .sort(sortByTime);
-    
-  const upcomingClasses = todayClasses.filter(slot => isUpcoming(slot.startTime));
+  const [timetable, setTimetable] = useState<any>();
+  const [todayClasses, setTodayClasses] = useState<TimeSlot[]>([]);
+  useEffect(() => {
+    try{
+      const fetchTimetable = async () => {
+        let res = await fetch(`${import.meta.env.VITE_HOST}/timetable`)
+        let data = await res.json()
+   
+        let tt:any ={}
+        data.timetable.forEach((obj:{day:string,slots:any[]})=>{
+          tt[obj.day] = obj.slots
+        })
+        setTimetable(tt)
+        let today = 'Monday'
+        data.timetable.forEach((obj:{day:string,slots:any[]})=>{
+      
+          if(obj?.day == today){
+            setTodayClasses(obj.slots)
+          }
+        })  
+      }
+        fetchTimetable()
+    }finally{
+   
+      setIsLoading(false)
+    }
+  }, [])
 
+  
   return (
     <div className="min-h-screen bg-gray-100">
       <nav className="bg-white shadow-sm">
@@ -38,11 +61,11 @@ export default function StudentDashboard() {
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 ">
+        <div className="">
           <div className="lg:col-span-3">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold">Today's Schedule ({today})</h2>
+              <h2 className="text-xl font-semibold">Today's Schedule ({days[new Date().getDay()]})</h2>
               <button
                 onClick={() => window.location.reload()}
                 className="flex items-center text-blue-600 hover:text-blue-700"
@@ -51,38 +74,29 @@ export default function StudentDashboard() {
                 Refresh Time
               </button>
             </div>
-            <div className="bg-white rounded-lg shadow">
-              <Timetable slots={todayClasses} showDays={false} />
+            <div className="bg-white rounded-lg shadow grid grid-cols-3">
+            {todayClasses && todayClasses.sort(sortTimeRanges).map((slot, index) => (
+                   <div>
+                    {renderTimeSlot(slot,true)}
+                   </div>
+        
+            ))}
+            
+            {todayClasses && todayClasses.length == 0 && <p>No classes today</p>}
+
             </div>
           </div>
 
-          <div className="lg:col-span-1">
-            <h2 className="text-xl font-semibold mb-4">Upcoming Classes Today</h2>
-            <div className="bg-white rounded-lg shadow p-4">
-              {upcomingClasses.length > 0 ? (
-                upcomingClasses.map((cls) => (
-                  <div
-                    key={cls.id}
-                    className="border-b last:border-b-0 py-3"
-                  >
-                    <div className="font-medium">{cls.subject}</div>
-                    <div className="text-sm text-gray-600">
-                      {cls.startTime} - {cls.endTime}
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      Room {cls.room} • {cls.teacher}
-                      {cls.isReplacement && (
-                        <span className="ml-1 text-orange-600">(Replacement)</span>
-                      )}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-gray-600">No more classes for today</p>
-              )}
-            </div>
-          </div>
+          
         </div>
+        <div className="overflow-x-auto">
+          <div>
+            <h2 className="text-xl font-semibold mt-8">Weekly Timetable</h2>
+          </div>
+              {
+                (!isLoading && timetable) && <Timetable data={timetable} />
+              }  
+            </div>
       </main>
     </div>
   );

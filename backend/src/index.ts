@@ -1,10 +1,14 @@
 import express from 'express';
 import authRouter from './routes/auth';  // Assuming your router file is named 'auth.ts'
-import timetableRouter from './routes/timetable';  // Assuming your router file is named 'timetable.ts'
+import adminRouter from './routes/admin';  // Assuming your router file is named 'timetable.ts'\
+import commonRouter from './routes/common';
+import teacherRouter from './routes/teachers';
+import { PrismaClient } from '@prisma/client';
 import dotenv from 'dotenv';
 import cors from 'cors';
 const host = process.env.HOST ?? 'http://localhost';
 const port = process.env.PORT || 3000;
+export const prisma = new PrismaClient();
 const app = express();
 dotenv.config();
 // Middleware to parse JSON bodies
@@ -14,8 +18,9 @@ app.use(cors());
 
 // Register the router for /auth routes
 app.use('/auth', authRouter);
-app.use('/timetable', timetableRouter);
-
+app.use('/admin', adminRouter);
+app.use("/",commonRouter);
+app.use("/teacher",teacherRouter);
 app.listen(port,() => {
   console.log(`Server is running at ${host}:${port}`);
 });

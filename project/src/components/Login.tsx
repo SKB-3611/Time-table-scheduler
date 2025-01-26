@@ -8,37 +8,27 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<'student' | 'teacher' | 'admin'>('student');
   const [error, setError] = useState('');
-  
-  const { user,login } = useAuth();
+  let {user , login} = useAuth()
   const navigate = useNavigate();
   useEffect(() => {
-   if(user){
-      switch (user.role) {
-          case 'student':
-            navigate('/student-dashboard');
-            break;
-          case 'teacher':
-            navigate('/teacher-dashboard');
-            break;
-          case 'admin':
-            navigate('/admin-dashboard');
-            break;
-        }
-   }
-  }, [])
+  if(user){
+    navigate(`/${user.role.toLocaleLowerCase()}-dashboard`);
+  }
+  }, [user])
   
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async(e: React.FormEvent) => {
     e.preventDefault();
-    const success = login(username, password, role);
-    
-    if (success) {
+   let a = await login(username,password,role)
+
+    if (a) {
       switch (role) {
         case 'student':
           navigate('/student-dashboard');
           break;
-        case 'teacher':
+        case 'teacher' || "TEACHER":
           navigate('/teacher-dashboard');
+        
           break;
         case 'admin':
           navigate('/admin-dashboard');

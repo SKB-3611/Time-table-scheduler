@@ -10,7 +10,9 @@ interface Data{
     break_time:string
     working_days:string
     classrooms:string
+    labs:string
     lecture_duration:string
+    practical_duration:string
     teachers:[{name:string,subjects:string[]}]
 }
 export const generatePropmt = (data:Data)=>{
@@ -25,11 +27,14 @@ Break: ${data?.break_time}
 End Time: ${data?.end_time}
 Working Days:${data?.working_days}
 Classrooms: ${data?.classrooms}
+Labs: (for practical subjects only) ${data?.labs}
 Lecture Halls (LH) for normal classes
 Labs: (for practical subjects only)
 Lecture Duration:
 
 Each lecture lasts ${data?.lecture_duration} hour.
+Practical Duration:
+Each practical session lasts ${data?.practical_duration} hours.
 Teachers:
 Provide a detailed list of teachers and their assigned subjects:
 
@@ -53,15 +58,16 @@ Return the timetable in the following structured JSON format, ensuring that labs
 
 {
     "Monday": [
-        { "start_time": "9:00 AM", "end_time": "10:00 AM", "subject": "Math", "teacher": "Prof. V. Iyer", "classroom": "LH1" },
-        { "start_time": "10:00 AM", "end_time": "11:00 AM", "subject": "PR-Web Development", "teacher": "Prof. S. Desai", "classroom": "Lab1" },
+        { "start_time": "9:00 AM", "end_time": "10:00 AM", "subject": "Math", "teacher": "Prof. V. Iyer", "room": "LH1" },
+        { "start_time": "10:00 AM", "end_time": "11:00 AM", "subject": "PR-Web Development", "teacher": "Prof. S. Desai", "room": "Lab1" },
         ...
-        { "start_time": "12:00 PM", "end_time": "12:30 PM", "subject": "Break", "teacher": "", "classroom": "" }
+        { "start_time": "12:00 PM", "end_time": "12:30 PM", "subject": "Break", "teacher": "", "room": "" }
         ],
         "Tuesday": [...],
         ...
         }
         Important Notes:
+        Time table should utilize the entire timings ie, from ${data?.start_time} to ${data?.end_time}
         Labs must only host practical sessions (subjects with 'PR').
         The timetable should explicitly show two consecutive slots for practical subjects (e.g., 9:00 AM - 10:00 AM and 10:00 AM - 11:00 AM).
         Ensure that the generated timetable is realistic and avoids overloading teachers or rooms.

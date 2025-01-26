@@ -13,7 +13,7 @@ function PrivateRoute({ children, allowedRole }: { children: React.ReactNode; al
     return <Navigate to="/" replace />;
   }
   
-  if (user.role !== allowedRole) {
+  if (user.role.toLocaleLowerCase() !== allowedRole) {
     return <Navigate to="/" replace />;
   }
   
@@ -23,7 +23,6 @@ function PrivateRoute({ children, allowedRole }: { children: React.ReactNode; al
 const App: React.FC = () => {
   return (
     <AuthProvider>
-    
         <Router>
           <Routes>
             <Route path="/" element={<Login />} />

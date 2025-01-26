@@ -7,6 +7,14 @@ export const users: User[] = [{
   role: 'admin',
   username: 'admin',
   password: 'admin123'
-}];
+},
+{
+  id: '2',
+  name: 'student',
+  role: 'student',
+  username: 'student',
+  password: 'student123'
+}
+];
 
 export const timetableData: TimeSlot[] = [];

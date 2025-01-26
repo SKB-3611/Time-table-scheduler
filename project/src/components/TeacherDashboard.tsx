@@ -1,29 +1,45 @@
-import React from 'react';
-import { useAuth } from '../context/AuthContext';
-
-import Timetable from './Timetable';
-import { timetableData } from '../data/mockData';
 import { Calendar, UserCheck, Clock } from 'lucide-react';
-import { getCurrentDay, isUpcoming, sortByTime } from '../utils/dateUtils';
-
+import { useEffect, useState } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { renderTimeSlot, sortTimeRanges } from '../utils/utils';
+import Timetable from './Timetable';
 export default function TeacherDashboard() {
-  const { user, logout } = useAuth();
-  const { setTeacherAvailability, isTeacherAvailable } = useTeacherAvailability();
-  const isAvailable = user ? isTeacherAvailable(user.name) : false;
-
-  const today = getCurrentDay();
-  const teacherClasses = timetableData
-    .filter(slot => slot.day === today && slot.teacher === user?.name)
-    .sort(sortByTime);
+  const [isLoading, setIsLoading] = useState(true);
+  const {user,logout} =  useAuth()
+  const [timetable, settimetable] = useState<any>([]);
+  const [todaysSchedule, setTodaysSchedule] = useState<any>([]);
+  let days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
+  useEffect(() => {
     
-  const upcomingClasses = teacherClasses.filter(slot => isUpcoming(slot.startTime));
-
-  const handleAvailabilityChange = (available: boolean) => {
-    if (user) {
-      setTeacherAvailability(user.name, available);
+    try{
+      const fetchTimetable = async () => {
+        let result = await fetch(`${import.meta.env.VITE_HOST}/teacher/getSchedule`, {
+          method: 'POST',
+          headers: {  
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({name:user?.username , day: "Monday" })
+        });
+        let res = await result.json()
+        setTodaysSchedule(res.schedule)
+       
+        let tt:any ={}
+        let a =await fetch(`${import.meta.env.VITE_HOST}/timetable`)
+        let data = await a.json()
+        data.timetable.forEach((obj:{day:string,slots:any[]})=>{
+          tt[obj.day] = obj.slots
+        })
+        settimetable(tt)
+      };
+      fetchTimetable();
+    }catch(e){
+      window.location.reload()
     }
-  };
-
+    finally{
+      setIsLoading(false)
+    }
+  }, [])
+  
   return (
     <div className="min-h-screen bg-gray-100">
       <nav className="bg-white shadow-sm">
@@ -34,24 +50,10 @@ export default function TeacherDashboard() {
               <span className="font-semibold text-lg">Teacher Dashboard</span>
             </div>
             <div className="flex items-center space-x-4">
-              <div className="flex items-center">
-                <UserCheck className={`w-5 h-5 ${isAvailable ? 'text-green-600' : 'text-red-600'} mr-2`} />
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={isAvailable}
-                    onChange={(e) => handleAvailabilityChange(e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                  <span className="ml-3 text-sm font-medium text-gray-900">
-                    {isAvailable ? 'Available' : 'Unavailable'}
-                  </span>
-                </label>
-              </div>
-              <span className="text-gray-600">Welcome, {user?.name}</span>
+              
+              <span className="text-gray-600">Welcome, {user?.username}</span>
               <button
-                onClick={logout}
+              onClick={()=>logout()}
                 className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
               >
                 Logout
@@ -61,55 +63,36 @@ export default function TeacherDashboard() {
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="">
           <div className="lg:col-span-3">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold">Today's Teaching Schedule ({today})</h2>
+              <h2 className="text-xl font-semibold">Today's Teaching Schedule ({days[new Date().getDay()]})</h2>
               <button
-                onClick={() => window.location.reload()}
                 className="flex items-center text-blue-600 hover:text-blue-700"
               >
                 <Clock className="w-4 h-4 mr-1" />
                 Refresh Time
               </button>
             </div>
-            {isAvailable ? (
-              <div className="bg-white rounded-lg shadow">
-                <Timetable slots={teacherClasses} showDays={false} />
+            <div className="bg-white rounded-lg shadow">
+              <div className="p-4 grid grid-cols-3 gap-5">
+                {(!isLoading && todaysSchedule) && todaysSchedule.sort(sortTimeRanges).map((slot: any) => {
+                 return renderTimeSlot(slot,true)
+                })}
+                {todaysSchedule.length == 0 && <p>No classes today</p>}
+                {isLoading && <p>Loading...</p>}
               </div>
-            ) : (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">
-                You are currently marked as unavailable. Your classes will be automatically reassigned.
-              </div>
-            )}
-          </div>
-
-          <div className="lg:col-span-1">
-            <h2 className="text-xl font-semibold mb-4">Upcoming Classes Today</h2>
-            <div className="bg-white rounded-lg shadow p-4">
-              {isAvailable ? (
-                upcomingClasses.length > 0 ? (
-                  upcomingClasses.map((cls) => (
-                    <div
-                      key={cls.id}
-                      className="border-b last:border-b-0 py-3"
-                    >
-                      <div className="font-medium">{cls.subject}</div>
-                      <div className="text-sm text-gray-600">
-                        {cls.startTime} - {cls.endTime}
-                      </div>
-                      <div className="text-sm text-gray-600">Room {cls.room}</div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-gray-600">No more classes for today</p>
-                )
-              ) : (
-                <p className="text-gray-600">You are marked as unavailable</p>
-              )}
             </div>
           </div>
+
+          
+        </div>
+        <div >
+          <h2 className="text-xl font-semibold mt-8 mb-2">Weekly Timetable</h2>
+                {
+                  (!isLoading && timetable) && <Timetable data={timetable} />
+                }
         </div>
       </main>
     </div>

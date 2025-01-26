@@ -4,14 +4,14 @@ import { users } from '../data/mockData';
 
 interface AuthContextType {
   user: User | null;
-  login: (username: string, password: string, role: 'student' | 'teacher') => boolean;
+  login: (username: string, password: string, role: 'student' | 'teacher'|"admin") => Promise<boolean>;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<any>(null);
 
   // Load the user from localStorage on mount
   useEffect(() => {
@@ -22,17 +22,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
   }, []);
 
-  const login = (username: string, password: string, role: 'student' | 'teacher') => {
-    const foundUser = users.find(
-      (u) => u.username === username && u.password === password && u.role === role
-    );
+  const login = async(username: string, password: string, role: 'student' | 'teacher'|"admin") => {
+    let result = await fetch(`${import.meta.env.VITE_HOST}/auth/login`,{
+      method:"POST",
+      headers:{
+        "Content-Type": "application/json"
+      },
+      body:JSON.stringify({username,password,role})
+    })
+    let res = await result.json()
 
-    if (foundUser) {
-      setUser(foundUser);
-      localStorage.setItem('user', JSON.stringify(foundUser)); // Save user to localStorage
-      return true;
-    }
-    return false;
+   if(res.status === "success"){
+    setUser({username:res.user.username,role:res.user.role})
+    localStorage.setItem('user', JSON.stringify({username:res.user.username,role:res.user.role}));
+    return true
+   }
+   return false
   };
 
   const logout = () => {

@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { Calendar, UserPlus, RefreshCw, Clock } from 'lucide-react';
+import React, { useEffect, useState } from "react";
+import { useAuth } from "../context/AuthContext";
+import { Calendar, UserPlus, RefreshCw, Clock, X } from "lucide-react";
 
-import {  Subject, Teacher, CollegeProps, TimetableData } from '../types';
-import Timetable from './Timetable';
+import { Teacher, CollegeProps, TimetableData } from "../types";
+import Timetable from "./Timetable";
 
 interface TeacherForm {
   name: string;
@@ -15,54 +15,79 @@ interface TeacherForm {
 export default function AdminDashboard() {
   const { logout } = useAuth();
   const [formData, setFormData] = useState<TeacherForm>({
-    name: '',
-    username: '',
-    password: '',
-    subjects: []
+    name: "",
+    username: "",
+    password: "",
+    subjects: [],
   });
-  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [isLoading, setisLoading] = useState(false);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
-  const [message, setMessage] = useState('');
-  const [newSubject, setNewSubject] = useState('');
-  const [timetable, setTimetable] = useState<TimetableData>();
+  const [message, setMessage] = useState("");
+  const [newSubject, setNewSubject] = useState("");
+  const [timetable, setTimetable] = useState<TimetableData|null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [timing, setTiming] = useState<CollegeProps>({
-    startTime: '09:00',
-    endTime: '17:00',
-    duration: 1,
-    breakStart: '12:00',
-    breakEnd: '12:30',
-    workingDays: 'Mon,Tue,Wed,Thu,Fri',
-    clasrooms: 'LH1 , LH2 , LH3 , Lab1, Lab2 '
+    startTime: "09:00",
+    endTime: "17:00",
+    class_duration: 1,
+    practical_duration: 1,
+    breakStart: "12:00",
+    breakEnd: "12:30",
+    workingDays: "Mon,Tue,Wed,Thu,Fri",
+    clasrooms: "LH1 , LH2 , LH3",
+    labs: "Lab1, Lab2",
   });
+  useEffect(() => {
+    (async () => {
+      try {
+        setisLoading(true);
+        let timetable = await fetch(`${import.meta.env.VITE_HOST}/timetable`);
+        let data = await timetable.json();
+        if(data.timetable.length ==0) return
+        let obj: { [key: string]: any } = {};
+        data.timetable.map((item: { day: string; slots: any[] }) => {
+          obj[item.day] = item.slots;
+        });
+        setTimetable(obj);
+        let teacher = await fetch(`${import.meta.env.VITE_HOST}/admin/getTeachers`);
+        let teacherData = await teacher.json();
+        setTeachers(teacherData.teachers);
+      } finally {
+        setisLoading(false);
+  
+      }
+    })();
+  }, []);
 
   const handleGenerateTimetable = async () => {
     if (teachers.length === 0) {
-      setMessage('Please add teachers before generating the timetable');
+      setMessage("Please add teachers before generating the timetable");
       return;
     }
 
-    if (subjects.length === 0) {
-      setMessage('Please add subjects before generating the timetable');
+    if (
+      teachers.filter((teacher) => teacher.subjects.length === 0).length > 0
+    ) {
+      setMessage("Please add subjects before generating the timetable");
       return;
     }
 
     // Validate timing
-    const [startHour] = timing.startTime.split(':').map(Number);
-    const [endHour] = timing.endTime.split(':').map(Number);
-    
+    const [startHour] = timing.startTime.split(":").map(Number);
+    const [endHour] = timing.endTime.split(":").map(Number);
+
     if (startHour >= endHour) {
-      setMessage('End time must be after start time');
+      setMessage("End time must be after start time");
       return;
     }
 
-    if (timing.duration <= 0) {
-      setMessage('Duration must be greater than 0');
+    if (timing.class_duration <= 0) {
+      setMessage("Duration must be greater than 0");
       return;
     }
 
-    if ((endHour - startHour) < timing.duration) {
-      setMessage('School hours must be greater than class duration');
+    if (endHour - startHour < timing.class_duration) {
+      setMessage("School hours must be greater than class duration");
       return;
     }
 
@@ -76,50 +101,51 @@ export default function AdminDashboard() {
     // } finally {
     //   setIsGenerating(false);
     // }
-    let t = teachers.map((teacher)=>{
+    let t = teachers.map((teacher) => {
       return {
-        name:teacher.name,
-        subjects:teacher.subjects
-      }
-    })
-  
-    let obj = {
-      start_time:timing.startTime,
-      end_time:timing.endTime,
-      break_time:`${timing.breakStart} to ${timing.breakEnd}`,
-      working_days:timing.workingDays,
-      classrooms:timing.clasrooms,
-      lecture_duration:timing.duration,
-      teachers:t
-    }
-    console.log(obj)
-    try{
-      let res = await fetch(`${import.meta.env.VITE_HOST}/timetable/generate`,{
-        method:'POST',
-        body:JSON.stringify(obj),
-        headers:{
-          'Content-Type':'application/json'
-        }
-      })
-      let data = await res.json()
-      setMessage(data?.message)
-      if(data?.status === 'success'){
-        setTimetable(data.timetableJSON)
-      }
-    }catch(e){
-      console.log(e)
-    }
-    finally{
-      setIsGenerating(false)
-    }
+        name: teacher.name,
+        subjects: teacher.subjects,
+      };
+    });
 
+    let obj = {
+      start_time: timing.startTime,
+      end_time: timing.endTime,
+      break_time: `${timing.breakStart} to ${timing.breakEnd}`,
+      working_days: timing.workingDays,
+      classrooms: timing.clasrooms,
+      labs: timing.labs,
+      lecture_duration: timing.class_duration,
+      practical_duration: timing.practical_duration,
+      teachers: t,
+    };
+  
+    try {
+      let res = await fetch(`${import.meta.env.VITE_HOST}/admin/generate`, {
+        method: "POST",
+        body: JSON.stringify(obj),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      let data = await res.json();
+      setMessage(data?.message);
+      if (data?.status === "success") {
+        setTimetable(data.timetableJSON);
+      }
+    } catch (e) {
+      console.log(e);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
-  const handleAddTeacher = (e: React.FormEvent) => {
+  const handleAddTeacher = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    setisLoading(true);
+
     if (formData.subjects.length === 0) {
-      setMessage('Please add at least one subject for the teacher');
+      setMessage("Please add at least one subject for the teacher");
       return;
     }
 
@@ -128,60 +154,72 @@ export default function AdminDashboard() {
       name: formData.name,
       username: formData.username,
       password: formData.password,
-      role: 'teacher',
-      subjects: formData.subjects
+      role: "teacher",
+      subjects: formData.subjects,
     };
-
-    const newSubjects = formData.subjects.map(subject => ({
-      name: subject,
-      teachers: [teacher.name]
-    }));
-
-    const updatedSubjects = [...subjects];
-    newSubjects.forEach(newSubject => {
-      const existingSubject = updatedSubjects.find(s => s.name === newSubject.name);
-      if (existingSubject) {
-        existingSubject.teachers.push(teacher.name);
-      } else {
-        updatedSubjects.push(newSubject);
+    try {
+      let res = await fetch(`${import.meta.env.VITE_HOST}/admin/addTeacher`, {
+        method: "POST",
+        body: JSON.stringify(teacher),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      let data = await res.json();
+      if (data?.status === "error") {
+        setMessage(data?.message);
+        return;
       }
-    });
+      setTeachers([...teachers, teacher]);
+      setFormData({
+        name: "",
+        username: "",
+        password: "",
+        subjects: [],
+      });
+    } catch (e) {
+      console.log(e);
+    } finally {
+      setisLoading(false);
+    }
 
-    setTeachers([...teachers, teacher]);
-    setSubjects(updatedSubjects);
-    setFormData({
-      name: '',
-      username: '',
-      password: '',
-      subjects: []
-    });
-    
-    setMessage('Teacher added successfully with assigned subjects');
+    setMessage("Teacher added successfully with assigned subjects");
   };
 
   const handleAddSubject = () => {
     if (newSubject.trim()) {
       if (formData.subjects.includes(newSubject.trim())) {
-        setMessage('This subject is already added');
+        setMessage("This subject is already added");
         return;
       }
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        subjects: [...prev.subjects, newSubject.trim()]
+        subjects: [...prev.subjects, newSubject.trim()],
       }));
-      setNewSubject('');
-      setMessage('');
+      setNewSubject("");
+      setMessage("");
     }
   };
 
   const handleRemoveSubject = (subjectToRemove: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      subjects: prev.subjects.filter(subject => subject !== subjectToRemove)
+      subjects: prev.subjects.filter((subject) => subject !== subjectToRemove),
     }));
   };
-
-  
+  const handleClearTimetable = async ()=>{
+    setisLoading(true);
+    try {
+      let res = await fetch(`${import.meta.env.VITE_HOST}/admin/clearTimetable`);
+      let data = await res.json();
+      setMessage(data?.message);
+      setTimetable(null);
+    } catch (e) {
+      console.log(e);
+    } finally {
+      setisLoading(false);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -206,11 +244,13 @@ export default function AdminDashboard() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {message && (
-          <div className={`border px-4 py-3 rounded mb-4 ${
-            message.includes('error') || message.includes('Please') 
-              ? 'bg-red-100 border-red-400 text-red-700'
-              : 'bg-green-100 border-green-400 text-green-700'
-          }`}>
+          <div
+            className={`border px-4 py-3 rounded mb-4 ${
+              message.includes("error") || message.includes("Please")
+                ? "bg-red-100 border-red-400 text-red-700"
+                : "bg-green-100 border-green-400 text-green-700"
+            }`}
+          >
             {message}
           </div>
         )}
@@ -223,65 +263,143 @@ export default function AdminDashboard() {
               <h2 className="text-xl font-semibold">School Timing Settings</h2>
             </div>
             <div className="space-y-4">
-              <div className='flex w-full gap-5'>
-                <div className='w-1/2'>
-
-                <label className="block text-sm font-medium text-gray-700">School Start Time</label>
-                <input
-                  type="time"
-                  value={timing.startTime}
-                  onChange={(e) => setTiming({ ...timing, startTime: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              <div className="flex w-full gap-5">
+                <div className="w-1/2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    School Start Time
+                  </label>
+                  <input
+                    
+                    type="time"
+                    value={timing.startTime}
+                    onChange={(e) =>
+                      setTiming({ ...timing, startTime: e.target.value })
+                    }
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                   />
-              
-                  </div>
-              <div className='w-1/2'>
-
-                <label className="block text-sm font-medium text-gray-700">School End Time</label>
-                <input
-                  type="time"
-                  value={timing.endTime}
-                  onChange={(e) => setTiming({ ...timing, endTime: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                </div>
+                <div className="w-1/2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    School End Time
+                  </label>
+                  <input
+                    type="time"
+                    value={timing.endTime}
+                    onChange={(e) =>
+                      setTiming({ ...timing, endTime: e.target.value })
+                    }
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                   />
-                  </div>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <div className="w-1/2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Class Duration (hours)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="3"
+                    value={timing.class_duration}
+                    onChange={(e) =>
+                      setTiming({
+                        ...timing,
+                        class_duration: Number(e.target.value),
+                      })
+                    }
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="w-1/2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Practical Duration (hours)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="3"
+                    value={timing.practical_duration}
+                    onChange={(e) =>
+                      setTiming({
+                        ...timing,
+                        practical_duration: Number(e.target.value),
+                      })
+                    }
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  />
+                </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Class Duration (hours)</label>
-                <input
-                  type="number"
-                  min="1"
-                  max="3"
-                  value={timing.duration}
-                  onChange={(e) => setTiming({ ...timing, duration: Number(e.target.value) })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Break Duration (hours)</label>
-                <div className='flex gap-2'>
-
-                <input
-                  type="time"
-                  value={timing.breakStart}
-                  onChange={(e) => setTiming({ ...timing, breakStart: (e.target.value) })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                <label className="block text-sm font-medium text-gray-700">
+                  Break Duration (hours)
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="time"
+                    value={timing.breakStart}
+                    onChange={(e) =>
+                      setTiming({ ...timing, breakStart: e.target.value })
+                    }
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                   />
-                <input
-                  type="time"
-                  value={timing.breakEnd}
-                  onChange={(e) => setTiming({ ...timing, breakEnd: (e.target.value) })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  <input
+                    type="time"
+                    value={timing.breakEnd}
+                    onChange={(e) =>
+                      setTiming({ ...timing, breakEnd: e.target.value })
+                    }
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                   />
-                  </div>
-                  <div className='mt-2'>
-                    <label className=' block text-sm font-medium text-gray-700' htmlFor="working-days">Add Working Days</label>
-                    <input type="text" className='w-full rounded-md border-gray-300 shadow-sm mt-2 focus:border-blue-500 focus:ring-blue-500' value={timing.workingDays} onChange={(e) => setTiming({ ...timing, workingDays: (e.target.value) })} />
-                  </div>
-                  <div className='mt-2'>
-                    <label className=' block text-sm font-medium text-gray-700' htmlFor="classrooms">Add Classrooms</label>
-                    <input type="text" className='w-full rounded-md border-gray-300 shadow-sm mt-2 focus:border-blue-500 focus:ring-blue-500' value={timing.clasrooms} onChange={(e) => setTiming({ ...timing, clasrooms: (e.target.value) })} />
-                  </div>
+                </div>
+                <div className="mt-2">
+                  <label
+                    className=" block text-sm font-medium text-gray-700"
+                    htmlFor="working-days"
+                  >
+                    Add Working Days
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full rounded-md border-gray-300 shadow-sm mt-2 focus:border-blue-500 focus:ring-blue-500"
+                    value={timing.workingDays}
+                    onChange={(e) =>
+                      setTiming({ ...timing, workingDays: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="mt-2">
+                  <label
+                    className=" block text-sm font-medium text-gray-700"
+                    htmlFor="classrooms"
+                  >
+                    Add Classrooms
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full rounded-md border-gray-300 shadow-sm mt-2 focus:border-blue-500 focus:ring-blue-500"
+                    value={timing.clasrooms}
+                    onChange={(e) =>
+                      setTiming({ ...timing, clasrooms: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="mt-2">
+                  <label
+                    className=" block text-sm font-medium text-gray-700"
+                    htmlFor="classrooms"
+                  >
+                    Add Practical Labs
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full rounded-md border-gray-300 shadow-sm mt-2 focus:border-blue-500 focus:ring-blue-500"
+                    value={timing.labs}
+                    onChange={(e) =>
+                      setTiming({ ...timing, labs: e.target.value })
+                    }
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -290,41 +408,57 @@ export default function AdminDashboard() {
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center mb-4">
               <UserPlus className="w-5 h-5 text-blue-600 mr-2" />
-              <h2 className="text-xl font-semibold">Add New Teacher with Subjects</h2>
+              <h2 className="text-xl font-semibold">
+                Add New Teacher with Subjects
+              </h2>
             </div>
             <form onSubmit={handleAddTeacher} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Name</label>
+                <label className="block text-sm font-medium text-gray-700">
+                  Name
+                </label>
                 <input
                   type="text"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Username</label>
+                <label className="block text-sm font-medium text-gray-700">
+                  Username
+                </label>
                 <input
                   type="text"
                   value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, username: e.target.value })
+                  }
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Password</label>
+                <label className="block text-sm font-medium text-gray-700">
+                  Password
+                </label>
                 <input
                   type="password"
                   value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, password: e.target.value })
+                  }
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Add Subjects</label>
+                <label className="block text-sm font-medium text-gray-700">
+                  Add Subjects
+                </label>
                 <div className="flex space-x-2">
                   <input
                     type="text"
@@ -360,10 +494,18 @@ export default function AdminDashboard() {
                 </div>
               </div>
               <button
+                disabled={isLoading}
                 type="submit"
-                className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
+                className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
               >
-                Add Teacher with Subjects
+                {isLoading ? (
+                  <div className="flex justify-center items-center">
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />{" "}
+                    Adding...
+                  </div>
+                ) : (
+                  "Add Teacher with Subjects"
+                )}
               </button>
             </form>
           </div>
@@ -421,33 +563,39 @@ export default function AdminDashboard() {
 
         {/* Current Teachers List */}
         <div className="bg-white rounded-lg shadow p-6 mb-8">
-          <h2 className="text-xl font-semibold mb-4">Current Teachers and Their Subjects</h2>
+          <h2 className="text-xl font-semibold mb-4">
+            Current Teachers and Their Subjects
+          </h2>
           {teachers.length > 0 ? (
-            <div className="space-y-4">
-              {teachers.map(teacher => (
+            <div className="space-y-4 grid grid-cols-2">
+              {teachers.map((teacher) => (
                 <div key={teacher.id} className="p-4 bg-gray-50 rounded-lg">
                   <div className="font-medium text-lg">{teacher.name}</div>
-                  <div className="text-sm text-gray-600">Username: {teacher.username}</div>
+                  <div className="text-sm text-gray-600">
+                    Username: {teacher.username}
+                  </div>
                   <div className="mt-2">
-                    <div className="text-sm font-medium text-gray-700">Assigned Subjects:</div>
+                    <div className="text-sm font-medium text-gray-700">
+                      Assigned Subjects:
+                    </div>
                     <div className="flex flex-wrap gap-2 mt-1">
-                      {subjects
-                        .filter(subject => subject.teachers.includes(teacher.name))
-                        .map(subject => (
-                          <span
-                            key={subject.name}
-                            className="px-2 py-1 bg-blue-100 text-blue-800 rounded-md text-sm"
-                          >
-                            {subject.name}
-                          </span>
-                        ))}
+                      {teacher.subjects.map((subject) => (
+                        <span
+                          key={subject}
+                          className="px-2 py-1 bg-blue-100 text-blue-800 rounded-md text-sm"
+                        >
+                          {subject}
+                        </span>
+                      ))}
                     </div>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-gray-600">No teachers added yet. Add teachers to get started.</p>
+            <p className="text-gray-600">
+              No teachers added yet. Add teachers to get started.
+            </p>
           )}
         </div>
 
@@ -455,22 +603,33 @@ export default function AdminDashboard() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-semibold">Current Timetable</h2>
+            <div className="flex items-center gap-5">
+              <button 
+              onClick={handleClearTimetable}
+              disabled={timetable === null}
+              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50">
+                <X /> Clear Time Table
+              </button>
             <button
               onClick={handleGenerateTimetable}
               disabled={isGenerating || teachers.length === 0}
               className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
             >
-              <RefreshCw className={`w-4 h-4 mr-2 ${isGenerating ? 'animate-spin' : ''}`} />
-              {isGenerating ? 'Generating...' : 'Generate New Timetable'}
+              <RefreshCw
+                className={`w-4 h-4 mr-2 ${isGenerating ? "animate-spin" : ""}`}
+              />
+              {isGenerating ? "Generating..." : "Generate New Timetable"}
             </button>
+            </div>
           </div>
-          {timetable ? (
+          {!isLoading && timetable ? (
             <div className="overflow-x-auto">
               <Timetable data={timetable} />
             </div>
           ) : (
             <p className="text-gray-600 text-center py-8">
-              No timetable generated yet. Add teachers and click the generate button to create a timetable.
+              No timetable generated yet. Add teachers and click the generate
+              button to create a timetable.
             </p>
           )}
         </div>

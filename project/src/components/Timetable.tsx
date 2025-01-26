@@ -1,12 +1,11 @@
-
 import React from 'react';
-
+import { parseTime, sortTimeRanges ,renderTimeSlot } from '../utils/utils';
 interface TimeSlot {
   start_time: string;
   end_time: string;
   subject: string;
   teacher: string;
-  classroom: string;
+  room: string;
 }
 
 interface TimetableData {
@@ -20,39 +19,9 @@ interface TimetableProps {
 }
 
 export default function Timetable({ data, showDays = true, selectedDay }: TimetableProps) {
-  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+  const days = data ? Object.keys(data) : [];
 
-  const renderTimeSlot = (slot: TimeSlot) => (
-    <div className={`p-2 rounded ${slot.subject === 'Break' ? 'bg-gray-50' : 'bg-blue-50'}`}>
-      {slot.subject !== 'Break' ? (
-        <>
-          <div className="font-medium">
-            {slot.subject}
-            {slot.subject.includes('PR') && 
-              <span className="ml-1 text-xs bg-blue-200 text-blue-800 px-1 rounded">
-                Practical
-              </span>
-            }
-          </div>
-          <div className="text-sm text-gray-600">Room: {slot.classroom}</div>
-          <div className="text-sm text-gray-600">{slot.teacher}</div>
-        </>
-      ) : (
-        <div className="text-center font-medium text-gray-500">Break</div>
-      )}
-    </div>
-  );
 
-  const parseTime = (time: string) => {
-    const [hours, minutes] = time.split(':').map(Number);
-    return hours * 60 + minutes; // Convert time to total minutes for comparison
-  };
-
-  const sortTimeRanges = (timeRangeA: string, timeRangeB: string) => {
-    const [startA] = timeRangeA.split('-');
-    const [startB] = timeRangeB.split('-');
-    return parseTime(startA) - parseTime(startB);
-  };
 
   // Single day view
   if (!showDays && selectedDay) {
@@ -67,7 +36,7 @@ export default function Timetable({ data, showDays = true, selectedDay }: Timeta
             </tr>
           </thead>
           <tbody>
-            {data[selectedDay]?.map((slot, index) => (
+            {data[selectedDay]?.sort(sortTimeRanges).map((slot, index) => (
               <tr key={index}>
                 <td className="border p-2">{slot.start_time}</td>
                 <td className="border p-2">{slot.end_time}</td>
@@ -97,19 +66,22 @@ export default function Timetable({ data, showDays = true, selectedDay }: Timeta
           </tr>
         </thead>
         <tbody>
-          {Array.from(new Set(days.flatMap(day => 
+          {Array.from(new Set(days.flatMap(day =>
             data[day]?.map(slot => `${slot.start_time}-${slot.end_time}`) ?? []
-          ))).sort(sortTimeRanges).map(timeRange => {
-            const [startTime] = timeRange.split('-');
+          ))).sort((a, b) => {
+            const [startA] = a.split('-');
+            const [startB] = b.split('-');
+            return parseTime(startA) - parseTime(startB);
+          }).map(timeRange => {
+            const [startTime,endTime] = timeRange.split('-');
+           
             return (
               <tr key={timeRange}>
                 <td className="border p-2 font-medium whitespace-nowrap">
-                  {startTime}
+                  {startTime} - {endTime}
                 </td>
                 {days.map(day => {
-                  const slot = data[day]?.find(s => 
-                    s.start_time === startTime
-                  );
+                  const slot = data[day]?.find(s => s.start_time === startTime);
                   return (
                     <td key={`${day}-${timeRange}`} className="border p-2">
                       {slot && renderTimeSlot(slot)}

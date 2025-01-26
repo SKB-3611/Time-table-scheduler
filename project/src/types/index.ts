@@ -23,18 +23,20 @@ export interface Subject {
 export interface CollegeProps {
   startTime: string;
   endTime: string;
-  duration: number;
+  class_duration: number;
+  practical_duration: number;
   breakStart: string;
   breakEnd: string;
   workingDays: string;
   clasrooms: string;
+  labs: string;
 }
 export interface TimeSlot {
   start_time: string;
   end_time: string;
   subject: string;
   teacher: string;
-  classroom: string;
+  room: string;
 }
 
 export interface TimetableData {
