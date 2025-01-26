@@ -12,15 +12,13 @@ export const prisma = new PrismaClient();
 const app = express();
 dotenv.config();
 // Middleware to parse JSON bodies
-
+let options: cors.CorsOptions = {
+  origin: 'https://time-table-schedular-frontend.vercel.app', // Allow requests from this origin
+  methods: ['GET', 'POST', 'PUT', 'DELETE'], // Allowed HTTP methods
+  credentials: true, // Allow cookies and credentials
+}
 app.use(express.json());
-app.use(cors(
-  {
-    origin: 'https://time-table-schedular-frontend.vercel.app', // Allow requests from this origin
-    methods: ['GET', 'POST', 'PUT', 'DELETE'], // Allowed HTTP methods
-    credentials: true, // Allow cookies and credentials
-  }
-));
+app.use(cors(options));
 
 // Register the router for /auth routes
 app.use('/auth', authRouter);
