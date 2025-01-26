@@ -9,6 +9,7 @@ export default function Login() {
   const [role, setRole] = useState<'student' | 'teacher' | 'admin'>('student');
   const [error, setError] = useState('');
   let {user , login} = useAuth()
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   useEffect(() => {
   if(user){
@@ -18,6 +19,7 @@ export default function Login() {
   
 
   const handleSubmit = async(e: React.FormEvent) => {
+    setIsLoading(true);
     e.preventDefault();
    let a = await login(username,password,role)
 
@@ -37,6 +39,7 @@ export default function Login() {
     } else {
       setError('Invalid credentials');
     }
+    setIsLoading(false);
   };
 
   return (
@@ -96,8 +99,9 @@ export default function Login() {
           </div>
 
           <button
+          disabled={isLoading}
             type="submit"
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
+            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
           >
             Login
           </button>
