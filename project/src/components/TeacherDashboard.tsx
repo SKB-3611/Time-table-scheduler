@@ -1,4 +1,4 @@
-import { Calendar, UserCheck, Clock } from 'lucide-react';
+import { Calendar, Clock } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { renderTimeSlot, sortTimeRanges } from '../utils/utils';
@@ -18,7 +18,7 @@ export default function TeacherDashboard() {
           headers: {  
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({name:user?.username , day: "Monday" })
+          body: JSON.stringify({name:user?.username , day: days[new Date().getDay()]})
         });
         let res = await result.json()
         setTodaysSchedule(res.schedule)
@@ -80,7 +80,7 @@ export default function TeacherDashboard() {
                 {(!isLoading && todaysSchedule) && todaysSchedule.sort(sortTimeRanges).map((slot: any) => {
                  return renderTimeSlot(slot,true)
                 })}
-                {todaysSchedule.length == 0 && <p>No classes today</p>}
+                {todaysSchedule.length == 0 && <p className='text-xl px-5'>No classes today</p>}
                 {isLoading && <p>Loading...</p>}
               </div>
             </div>

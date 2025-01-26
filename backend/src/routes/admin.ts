@@ -121,6 +121,32 @@ router.post("/addTeacher",async (req: Request, res: any) => {
     })
   }
 })
+router.post("/deleteTeacher",async(req: Request, res: any) => {
+  try{
+    let {username} = req.body
+    let result = await prisma.teacher.delete({
+      where:{
+        username:username
+      }
+    })
+    if(result){
+      return res.status(200).json({
+        status:"success",
+        message:"Teacher deleted successfully"
+      })
+    }
+    return res.status(404).json({
+      status:"error",
+      message:"Teacher not found"
+    })
+  }catch(e){
+    console.log(e)
+    return res.status(500).json({
+      status:"error",
+      message:"Failed to delete teacher"
+    })
+  }
+})
 
 router.get("/clearTimetable", async (_req: Request, res: any) => {
   try{

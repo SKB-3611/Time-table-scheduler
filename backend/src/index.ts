@@ -13,7 +13,7 @@ const app = express();
 dotenv.config();
 // Middleware to parse JSON bodies
 let options: cors.CorsOptions = {
-  origin: 'https://time-table-schedular-frontend.vercel.app', // Allow requests from this origin
+  origin: ['https://time-table-schedular-frontend.vercel.app','http://localhost:5173'], // Allowed origins
   methods: ['GET', 'POST', 'PUT', 'DELETE'], // Allowed HTTP methods
   credentials: true, // Allow cookies and credentials
   allowedHeaders: ['Content-Type', 'Authorization'], // Allowed headers

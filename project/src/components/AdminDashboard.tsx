@@ -1,6 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import { Calendar, UserPlus, RefreshCw, Clock, X } from "lucide-react";
+import {
+  Calendar,
+  UserPlus,
+  RefreshCw,
+  Clock,
+  X,
+  Trash2,
+  Edit,
+} from "lucide-react";
 
 import { Teacher, CollegeProps, TimetableData } from "../types";
 import Timetable from "./Timetable";
@@ -24,7 +32,7 @@ export default function AdminDashboard() {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [message, setMessage] = useState("");
   const [newSubject, setNewSubject] = useState("");
-  const [timetable, setTimetable] = useState<TimetableData|null>(null);
+  const [timetable, setTimetable] = useState<TimetableData | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [timing, setTiming] = useState<CollegeProps>({
     startTime: "09:00",
@@ -37,24 +45,29 @@ export default function AdminDashboard() {
     clasrooms: "LH1 , LH2 , LH3",
     labs: "Lab1, Lab2",
   });
+  const [editingTeacherId, setEditingTeacherId] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(
+    null
+  );
   useEffect(() => {
     (async () => {
       try {
         setisLoading(true);
         let timetable = await fetch(`${import.meta.env.VITE_HOST}/timetable`);
         let data = await timetable.json();
-        if(data.timetable.length ==0) return
+        if (data.timetable.length == 0) return;
         let obj: { [key: string]: any } = {};
         data.timetable.map((item: { day: string; slots: any[] }) => {
           obj[item.day] = item.slots;
         });
         setTimetable(obj);
-        let teacher = await fetch(`${import.meta.env.VITE_HOST}/admin/getTeachers`);
+        let teacher = await fetch(
+          `${import.meta.env.VITE_HOST}/admin/getTeachers`
+        );
         let teacherData = await teacher.json();
         setTeachers(teacherData.teachers);
       } finally {
         setisLoading(false);
-  
       }
     })();
   }, []);
@@ -119,7 +132,7 @@ export default function AdminDashboard() {
       practical_duration: timing.practical_duration,
       teachers: t,
     };
-  
+
     try {
       let res = await fetch(`${import.meta.env.VITE_HOST}/admin/generate`, {
         method: "POST",
@@ -149,43 +162,122 @@ export default function AdminDashboard() {
       return;
     }
 
-    const teacher: Teacher = {
-      id: String(teachers.length + 1),
-      name: formData.name,
-      username: formData.username,
-      password: formData.password,
-      role: "teacher",
-      subjects: formData.subjects,
-    };
-    try {
-      let res = await fetch(`${import.meta.env.VITE_HOST}/admin/addTeacher`, {
-        method: "POST",
-        body: JSON.stringify(teacher),
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-      let data = await res.json();
-      if (data?.status === "error") {
-        setMessage(data?.message);
-        return;
-      }
+    if (editingTeacherId) {
+      // Update existing teacher
+      const updatedTeachers = teachers.map((teacher) =>
+        teacher.id === editingTeacherId
+          ? {
+              ...teacher,
+              name: formData.name,
+              username: formData.username,
+              password: formData.password,
+              subjects: formData.subjects,
+            }
+          : teacher
+      );
+
+      setTeachers(updatedTeachers);
+      setEditingTeacherId(null);
+      setMessage("Teacher updated successfully");
+      let result = await fetch(
+        `${import.meta.env.VITE_HOST}/admin/addTeacher`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: formData.name,
+            username: formData.username,
+            password: formData.password,
+            subjects: formData.subjects,
+          }),
+        }
+      );
+    } else {
+      // Add new teacher
+      const teacher: Teacher = {
+        id: String(teachers.length + 1),
+        name: formData.name,
+        username: formData.username,
+        password: formData.password,
+        role: "teacher",
+        subjects: formData.subjects,
+      };
+
       setTeachers([...teachers, teacher]);
-      setFormData({
-        name: "",
-        username: "",
-        password: "",
-        subjects: [],
-      });
-    } catch (e) {
-      console.log(e);
-    } finally {
-      setisLoading(false);
+      setMessage("Teacher added successfully with assigned subjects");
+      let result = await fetch(
+        `${import.meta.env.VITE_HOST}/admin/addTeacher`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: formData.name,
+            username: formData.username,
+            password: formData.password,
+            subjects: formData.subjects,
+          }),
+        }
+      );
     }
 
-    setMessage("Teacher added successfully with assigned subjects");
+    // Reset form
+    setFormData({
+      name: "",
+      username: "",
+      password: "",
+      subjects: [],
+    });
+    setNewSubject("");
+    setisLoading(false);
   };
 
+  const handleEditTeacher = (teacher: Teacher) => {
+    // Populate form with teacher details
+    setFormData({
+      name: teacher.name,
+      username: teacher.username,
+      password: teacher.password,
+      subjects: teacher.subjects,
+    });
+
+    // Set editing mode
+    setEditingTeacherId(teacher.id);
+  };
+
+  const handleDeleteTeacher = async (teacherUsername: string) => {
+    // Remove teacher from state
+    try {
+      let res = await fetch(
+        `${import.meta.env.VITE_HOST}/admin/deleteTeacher`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ username: teacherUsername }),
+        }
+      );
+      if (res.status !== 200) {
+        setMessage("Failed to delete teacher");
+        return;
+      } else {
+        const updatedTeachers = teachers.filter(
+          (teacher) => teacher.username !== teacherUsername
+        );
+        setTeachers(updatedTeachers);
+
+        // Close confirmation dialog
+        setShowDeleteConfirm(null);
+        setMessage("Teacher deleted successfully");
+      }
+    } catch (e) {
+      console.log(e);
+    }
+  };
   const handleAddSubject = () => {
     if (newSubject.trim()) {
       if (formData.subjects.includes(newSubject.trim())) {
@@ -207,10 +299,12 @@ export default function AdminDashboard() {
       subjects: prev.subjects.filter((subject) => subject !== subjectToRemove),
     }));
   };
-  const handleClearTimetable = async ()=>{
+  const handleClearTimetable = async () => {
     setisLoading(true);
     try {
-      let res = await fetch(`${import.meta.env.VITE_HOST}/admin/clearTimetable`);
+      let res = await fetch(
+        `${import.meta.env.VITE_HOST}/admin/clearTimetable`
+      );
       let data = await res.json();
       setMessage(data?.message);
       setTimetable(null);
@@ -219,7 +313,7 @@ export default function AdminDashboard() {
     } finally {
       setisLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -269,7 +363,6 @@ export default function AdminDashboard() {
                     School Start Time
                   </label>
                   <input
-                    
                     type="time"
                     value={timing.startTime}
                     onChange={(e) =>
@@ -569,7 +662,24 @@ export default function AdminDashboard() {
           {teachers.length > 0 ? (
             <div className="space-y-4 grid grid-cols-2">
               {teachers.map((teacher) => (
-                <div key={teacher.id} className="p-4 bg-gray-50 rounded-lg">
+                <div
+                  key={teacher.username}
+                  className="p-4 bg-gray-50 rounded-lg relative"
+                >
+                  <div className="absolute top-2 right-2 flex space-x-2">
+                    <button
+                      onClick={() => handleEditTeacher(teacher)}
+                      className="text-blue-600 hover:text-blue-800"
+                    >
+                      <Edit className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => setShowDeleteConfirm(teacher.username)}
+                      className="text-red-600 hover:text-red-800"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  </div>
                   <div className="font-medium text-lg">{teacher.name}</div>
                   <div className="text-sm text-gray-600">
                     Username: {teacher.username}
@@ -599,27 +709,56 @@ export default function AdminDashboard() {
           )}
         </div>
 
+        {/* Delete Confirmation Modal */}
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg shadow-xl">
+              <h3 className="text-lg font-semibold mb-4">Confirm Delete</h3>
+              <p className="mb-6">
+                Are you sure you want to delete this teacher?
+              </p>
+              <div className="flex justify-end space-x-4">
+                <button
+                  onClick={() => setShowDeleteConfirm(null)}
+                  className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleDeleteTeacher(showDeleteConfirm)}
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Timetable Section with Generate Button */}
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-semibold">Current Timetable</h2>
             <div className="flex items-center gap-5">
-              <button 
-              onClick={handleClearTimetable}
-              disabled={timetable === null}
-              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50">
+              <button
+                onClick={handleClearTimetable}
+                disabled={timetable === null}
+                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >
                 <X /> Clear Time Table
               </button>
-            <button
-              onClick={handleGenerateTimetable}
-              disabled={isGenerating || teachers.length === 0}
-              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
-            >
-              <RefreshCw
-                className={`w-4 h-4 mr-2 ${isGenerating ? "animate-spin" : ""}`}
-              />
-              {isGenerating ? "Generating..." : "Generate New Timetable"}
-            </button>
+              <button
+                onClick={handleGenerateTimetable}
+                disabled={isGenerating || teachers.length === 0}
+                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >
+                <RefreshCw
+                  className={`w-4 h-4 mr-2 ${
+                    isGenerating ? "animate-spin" : ""
+                  }`}
+                />
+                {isGenerating ? "Generating..." : "Generate New Timetable"}
+              </button>
             </div>
           </div>
           {!isLoading && timetable ? (

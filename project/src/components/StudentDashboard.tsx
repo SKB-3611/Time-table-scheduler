@@ -23,7 +23,7 @@ export default function StudentDashboard() {
           tt[obj.day] = obj.slots
         })
         setTimetable(tt)
-        let today = 'Monday'
+        let today = days[new Date().getDay()]
         data.timetable.forEach((obj:{day:string,slots:any[]})=>{
       
           if(obj?.day == today){
@@ -82,7 +82,7 @@ export default function StudentDashboard() {
         
             ))}
             
-            {todayClasses && todayClasses.length == 0 && <p>No classes today</p>}
+            {todayClasses && todayClasses.length == 0 && <p className='text-xl p-5 py-3'>No classes today</p>}
 
             </div>
           </div>
