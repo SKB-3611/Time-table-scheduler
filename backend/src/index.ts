@@ -14,7 +14,13 @@ dotenv.config();
 // Middleware to parse JSON bodies
 
 app.use(express.json());
-app.use(cors());
+app.use(cors(
+  {
+    origin: 'https://time-table-schedular-frontend.vercel.app', // Allow requests from this origin
+    methods: ['GET', 'POST', 'PUT', 'DELETE'], // Allowed HTTP methods
+    credentials: true, // Allow cookies and credentials
+  }
+));
 
 // Register the router for /auth routes
 app.use('/auth', authRouter);
