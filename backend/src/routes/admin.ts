@@ -15,19 +15,21 @@ if (!apiKey) {
     "Google API key is missing. Please set GOOGLE_API_KEY in the environment."
   );
 }
+const generationConfig = {
+  temperature: 1,
+  topP: 0.95,
+  topK: 40,
+  maxOutputTokens: 8192,
+  responseMimeType: "text/plain",
+};
 
 const genAI = new GoogleGenerativeAI(apiKey);
 const model = genAI.getGenerativeModel({
   model: "gemini-2.0-flash-exp",
+  generationConfig: generationConfig,
 });
 
-// const generationConfig = {
-//   temperature: 1,
-//   topP: 0.95,
-//   topK: 40,
-//   maxOutputTokens: 8192,
-//   responseMimeType: "text/plain",
-// };
+
 
 // async function generate(): Promise<string> {
 
@@ -147,7 +149,6 @@ router.post("/deleteTeacher",async(req: Request, res: any) => {
     })
   }
 })
-
 router.get("/clearTimetable", async (_req: Request, res: any) => {
   try{
     let result =await prisma.$transaction([
@@ -200,3 +201,20 @@ router.get("/getTeachers", async (_req: Request, res: any) => {
 })
 
 export default router;
+
+export const regenerate =async (prompt:string) => {
+  try{
+    let response =await model.generateContent(prompt).then(res=>res.response.text())
+
+    response = response.replace(/```json|```/g, "").trim();
+    let obj = JSON.parse(response);
+    obj["status"]="success"
+    return obj
+  }catch(e){
+    console.log(e)
+    return{
+      status:"error",
+      message:"Failed to regenerate"
+    }
+  }
+}

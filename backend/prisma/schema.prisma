@@ -15,15 +15,7 @@ model User {
   password String
 }
 
-model Teacher {
-  id          String   @id @default(uuid()) // Use UUID for PostgreSQL
-  name        String
-  role        Role
-  username    String   @unique // Add uniqueness constraint for username
-  password    String
-  subjects    String[] // Keep the array for multiple subjects
-  isAvailable Boolean?
-}
+
 
 model Slot {
   id          String    @id @default(uuid()) // Use UUID for PostgreSQL
@@ -45,4 +37,35 @@ enum Role {
   STUDENT
   ADMIN
   TEACHER
+}
+model Teacher {
+  id             String         @id @default(uuid())
+  name           String
+  role           Role
+  username       String         @unique
+  password       String
+  subjects       String[]
+  isAvailable    Boolean        @default(false)
+  replacementLog ReplacementLog[]  @relation
+}
+
+model ReplacementLog {
+  id                 String           @id @default(uuid())
+  originalTeacher    String
+  replacementTeacher String
+  replacementSlots   ReplacementSlot[]
+  teacher            Teacher           @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  teacherId          String            @unique
+}
+
+model ReplacementSlot {
+  id                 String         @id @default(uuid())
+  originalTeacher    String
+  replacementTeacher String
+  subject            String
+  room               String
+  startTime          String
+  endTime            String
+  replacementLog     ReplacementLog @relation(fields: [replacementLogId], references: [id])
+  replacementLogId   String
 }

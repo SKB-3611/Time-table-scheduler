@@ -243,7 +243,6 @@ export default function AdminDashboard() {
       password: teacher.password,
       subjects: teacher.subjects,
     });
-
     // Set editing mode
     setEditingTeacherId(teacher.id);
   };

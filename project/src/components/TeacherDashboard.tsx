@@ -21,8 +21,29 @@ export default function TeacherDashboard() {
           body: JSON.stringify({name:user?.username , day: days[new Date().getDay()]})
         });
         let res = await result.json()
-        setTodaysSchedule(res.schedule)
-       
+        console.log(res)
+        if(res.status == "success"){
+          console.log(res?.replacementSlots,res?.schedule)
+          if(res?.replacementSlots){
+            let arr = [...res?.schedule]
+            let rep =res.replacementSlots.map((slot:any)=>{
+              return{
+                start_time:slot.startTime,
+                end_time:slot.endTime,
+                subject:slot.subject,
+                teacher:slot.replacementTeacher,
+                room:slot.room,
+                isReplaced:true
+              }
+            })
+            arr= arr.concat(rep)
+            console.log(arr)
+            console.log("in replacementslots")
+            setTodaysSchedule(arr)
+          }
+          else
+          setTodaysSchedule(res.schedule)
+          
         let tt:any ={}
         let a =await fetch(`${import.meta.env.VITE_HOST}/timetable`)
         let data = await a.json()
@@ -30,7 +51,8 @@ export default function TeacherDashboard() {
           tt[obj.day] = obj.slots
         })
         settimetable(tt)
-      };
+      }
+    }
       fetchTimetable();
     }catch(e){
       window.location.reload()

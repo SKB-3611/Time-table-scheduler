@@ -37,6 +37,7 @@ export interface TimeSlot {
   subject: string;
   teacher: string;
   room: string;
+  isReplaced?: boolean;
 }
 
 export interface TimetableData {

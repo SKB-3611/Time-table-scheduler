@@ -28,8 +28,15 @@ router.post("/login", async(req: any, res:any) => {
     })
   
     if(user){
-
       if(bcrypt.compareSync(password,user.password)){
+        await prisma.teacher.update({
+          where:{
+            username:username
+          },
+          data:{
+            isAvailable:true
+          }
+        })
         return res.status(200).json({
           status:"success",
           message:"Login successful",
