@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter , Routes, Route, Navigate, } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './components/Login';
 import StudentDashboard from './components/StudentDashboard';
@@ -23,7 +23,7 @@ function PrivateRoute({ children, allowedRole }: { children: React.ReactNode; al
 const App: React.FC = () => {
   return (
     <AuthProvider>
-        <Router>
+        <BrowserRouter>
           <Routes>
             <Route path="/" element={<Login />} />
             <Route
@@ -51,7 +51,7 @@ const App: React.FC = () => {
               }
             />
           </Routes>
-        </Router>
+        </BrowserRouter>
 
     </AuthProvider>
   );
