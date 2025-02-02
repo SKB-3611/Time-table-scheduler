@@ -88,7 +88,11 @@ const func = async () => {
     })
     await prisma.$transaction(async (tx) => {
       // Create replacement logs first, associating with teachers
-      const replacementLogPromises = res.replacementLogs.map((log: any) => 
+      const replacementLogPromises = res.replacementLogs.map((log: {
+        id: string;
+        originalTeacher: string;
+        replacementTeacher: string;
+      }) => 
         tx.replacementLog.create({
           data: {
             id: log.id,
@@ -96,18 +100,25 @@ const func = async () => {
             replacementTeacher: log.replacementTeacher,
             teacher: {
               connect: { 
-                username: log.originalTeacher // Assuming username is unique
+                username: log.originalTeacher
               }
             }
           }
         })
       );
     
-      // Execute replacement log creation
       await Promise.all(replacementLogPromises);
     
-      // Create replacement slots referencing logs
-      const replacementSlotPromises = res.replacementSlots.map((slot: any) =>
+      const replacementSlotPromises = res.replacementSlots.map((slot: {
+        id: string;
+        originalTeacher: string;
+        replacementTeacher: string;
+        subject: string;
+        room: string;
+        startTime: string;
+        endTime: string;
+        replacementLogId: string;
+      }) =>
         tx.replacementSlot.create({
           data: {
             id: slot.id,
@@ -122,10 +133,7 @@ const func = async () => {
         })
       );
     
-      // Execute all promises
-      await Promise.all([
-        ...replacementSlotPromises
-      ]);
+      await Promise.all(replacementSlotPromises);
     });
     
     
