@@ -34,7 +34,7 @@ app.use("/teacher", teacherRouter);
 app.listen(port, () => {
   console.log(`Server is running at ${host}:${port}`);
 });
-// @ts-ignore
+
 const func = async () => {
   await prisma.$transaction(async(tx)=>{
     const replacementSlot = await tx.replacementSlot.deleteMany()
@@ -136,13 +136,11 @@ const func = async () => {
 try{
   cron.schedule("30 3 * * *" , async ()=>{
     try{
-      func()
+      func();
     }catch(e){
       console.log(e)
     }
   })
-
-  // func();
 }
 catch(err){
  console.log(err);
