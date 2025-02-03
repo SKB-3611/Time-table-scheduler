@@ -16,6 +16,7 @@ dotenv.config();
 // Middleware to parse JSON bodies
 let options: cors.CorsOptions = {
   origin: [
+    "*",
     "https://time-table-schedular-frontend.vercel.app",
     "http://localhost:5173",
   ], // Allowed origins
