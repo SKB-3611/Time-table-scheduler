@@ -33,8 +33,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let res = await result.json()
 
    if(res.status === "success"){
-    setUser({username:res.user.username,role:res.user.role})
-    localStorage.setItem('user', JSON.stringify({username:res.user.username,role:res.user.role}));
+    setUser({username:res.user.username,name:res.user.name,role:res.user.role})
+    localStorage.setItem('user', JSON.stringify({name:res.user.name,username:res.user.username,role:res.user.role}));
     return true
    }
    return false

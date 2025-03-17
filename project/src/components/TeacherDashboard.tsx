@@ -20,7 +20,7 @@ export default function TeacherDashboard() {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ name: user?.username, day: days[new Date().getDay()] }),
+          body: JSON.stringify({ name: user?.name, day: days[new Date().getDay()] }),
         })
         const res = await result.json()
         if (res.status === "success") {
