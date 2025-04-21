@@ -117,6 +117,8 @@ Replacement Rules:
 3. General:
    - Ensure replacements are **distributed evenly** to avoid overloading any single teacher.
    - **Teachers must teach their own subjects**. A replacement teacher should not teach a subject they are not qualified for.
+   - Names of the subject should be same as provided dont add anything extra
+   
    
    - Update the 'replacement' field of the absent teacher with the replacement teacher's name.
 4.Important Notes:
